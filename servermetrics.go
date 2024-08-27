@@ -1,4 +1,4 @@
-package cpustats
+package servermetrics
 
 import (
 	"fmt"
