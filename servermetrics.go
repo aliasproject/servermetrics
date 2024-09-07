@@ -189,13 +189,27 @@ func GetDiskStats(path string) (DiskStats, error) {
 }
 
 // CalculateCPUUsage calculates the CPU usage between two snapshots of CPUStats
-func CalculateCPUUsage(prevStats, currentStats CPUStats) float64 {
-	totalDelta := currentStats.Total - prevStats.Total
-	idleDelta := currentStats.Idle - prevStats.Idle
+func CalculateCPUUsage(prevStats, currentStats CPUStats) map[string]uint64 {
+	usage := make(map[string]uint64)
 
-	if totalDelta == 0 {
-		return 0.0
+	calcDelta := func(current, prev uint64) uint64 {
+		return current - prev
 	}
 
-	return 100.0 * (1.0 - float64(idleDelta)/float64(totalDelta))
+	usage["User"] = calcDelta(currentStats.User, prevStats.User)
+	usage["Nice"] = calcDelta(currentStats.Nice, prevStats.Nice)
+	usage["System"] = calcDelta(currentStats.System, prevStats.System)
+	usage["Idle"] = calcDelta(currentStats.Idle, prevStats.Idle)
+	usage["Iowait"] = calcDelta(currentStats.Iowait, prevStats.Iowait)
+	usage["Irq"] = calcDelta(currentStats.Irq, prevStats.Irq)
+	usage["Softirq"] = calcDelta(currentStats.Softirq, prevStats.Softirq)
+	usage["Steal"] = calcDelta(currentStats.Steal, prevStats.Steal)
+	usage["Guest"] = calcDelta(currentStats.Guest, prevStats.Guest)
+	usage["GuestNice"] = calcDelta(currentStats.GuestNice, prevStats.GuestNice)
+
+	usage["Active"] = calcDelta(currentStats.ActiveTime, prevStats.ActiveTime)
+	usage["Idle"] = calcDelta(currentStats.IdleTime, prevStats.IdleTime)
+	usage["Total"] = calcDelta(currentStats.TotalTime, prevStats.TotalTime)
+
+	return usage
 }
