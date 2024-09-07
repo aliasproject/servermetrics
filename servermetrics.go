@@ -10,12 +10,19 @@ import (
 
 // CPUStats represents the CPU stats at a point in time
 type CPUStats struct {
-	User   uint64
-	Nice   uint64
-	System uint64
-	Idle   uint64
-	Iowait uint64
-	Total  uint64
+	User       uint64
+	Nice       uint64
+	System     uint64
+	Idle       uint64
+	Iowait     uint64
+	Irq        uint64
+	Softirq    uint64
+	Steal      uint64
+	Guest      uint64
+	GuestNice  uint64
+	ActiveTime uint64
+	IdleTime   uint64
+	TotalTime  uint64
 }
 
 // MemoryStats represents the memory usage stats at a point in time
@@ -43,7 +50,7 @@ func GetCPUStats() (CPUStats, error) {
 	lines := strings.Split(string(data), "\n")
 	cpuLine := strings.Fields(lines[0])
 
-	if len(cpuLine) < 8 {
+	if len(cpuLine) < 11 {
 		return CPUStats{}, fmt.Errorf("unexpected format in /proc/stat")
 	}
 
@@ -67,16 +74,45 @@ func GetCPUStats() (CPUStats, error) {
 	if err != nil {
 		return CPUStats{}, err
 	}
+	irq, err := strconv.ParseUint(cpuLine[6], 10, 64)
+	if err != nil {
+		return CPUStats{}, err
+	}
+	softirq, err := strconv.ParseUint(cpuLine[7], 10, 64)
+	if err != nil {
+		return CPUStats{}, err
+	}
+	steal, err := strconv.ParseUint(cpuLine[8], 10, 64)
+	if err != nil {
+		return CPUStats{}, err
+	}
+	guest, err := strconv.ParseUint(cpuLine[9], 10, 64)
+	if err != nil {
+		return CPUStats{}, err
+	}
+	guestNice, err := strconv.ParseUint(cpuLine[10], 10, 64)
+	if err != nil {
+		return CPUStats{}, err
+	}
 
-	total := user + nice + system + idle + iowait
+	activeTime := user + nice + system + irq + softirq + steal + guest + guestNice
+	idleTime := idle + iowait
+	totalTime := activeTime + idleTime
 
 	return CPUStats{
-		User:   user,
-		Nice:   nice,
-		System: system,
-		Idle:   idle,
-		Iowait: iowait,
-		Total:  total,
+		User:       user,
+		Nice:       nice,
+		System:     system,
+		Idle:       idle,
+		Iowait:     iowait,
+		Irq:        irq,
+		Softirq:    softirq,
+		Steal:      steal,
+		Guest:      guest,
+		GuestNice:  guestNice,
+		ActiveTime: activeTime,
+		IdleTime:   idleTime,
+		TotalTime:  totalTime,
 	}, nil
 }
 
