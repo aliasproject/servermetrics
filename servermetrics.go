@@ -10,26 +10,29 @@ import (
 
 // CPUStats represents the CPU stats at a point in time
 type CPUStats struct {
-	User       uint64 `json:"user"`
-	Nice       uint64 `json:"nice"`
-	System     uint64 `json:"system"`
-	Idle       uint64 `json:"idle"`
-	Iowait     uint64 `json:"iowait"`
-	Irq        uint64 `json:"irq"`
-	Softirq    uint64 `json:"softirq"`
-	Steal      uint64 `json:"steal"`
-	Guest      uint64 `json:"guest"`
-	GuestNice  uint64 `json:"guest_nice"`
-	ActiveTime uint64 `json:"active_time"`
-	IdleTime   uint64 `json:"idle_time"`
-	TotalTime  uint64 `json:"total_time"`
+	User             uint64   `json:"user"`
+	Nice             uint64   `json:"nice"`
+	System           uint64   `json:"system"`
+	Idle             uint64   `json:"idle"`
+	Iowait           uint64   `json:"iowait"`
+	Irq              uint64   `json:"irq"`
+	Softirq          uint64   `json:"softirq"`
+	Steal            uint64   `json:"steal"`
+	Guest            uint64   `json:"guest"`
+	GuestNice        uint64   `json:"guest_nice"`
+	ActiveTime       uint64   `json:"active_time"`
+	IdleTime         uint64   `json:"idle_time"`
+	TotalTime        uint64   `json:"total_time"`
+	UsedPct          float64  `json:"usedpct"`
+	UsedPctSinceBoot *float64 `json:"usedpct_since_boot,omitempty"`
 }
 
 // MemoryStats represents the memory usage stats at a point in time
 type MemoryStats struct {
-	Total     uint64 `json:"total"`
-	Available uint64 `json:"available"`
-	Used      uint64 `json:"used"`
+	Total     uint64  `json:"total"`
+	Available uint64  `json:"available"`
+	Used      uint64  `json:"used"`
+	UsedPct   float64 `json:"usedpct"`
 }
 
 // DiskStats represents the disk space usage stats at a point in time
@@ -98,6 +101,7 @@ func GetCPUStats() (CPUStats, error) {
 	activeTime := user + nice + system + irq + softirq + steal + guest + guestNice
 	idleTime := idle + iowait
 	totalTime := activeTime + idleTime
+	usedPct := float64(activeTime) / float64(totalTime) * 100.0
 
 	return CPUStats{
 		User:       user,
@@ -113,6 +117,7 @@ func GetCPUStats() (CPUStats, error) {
 		ActiveTime: activeTime,
 		IdleTime:   idleTime,
 		TotalTime:  totalTime,
+		UsedPct:    usedPct,
 	}, nil
 }
 
@@ -152,10 +157,14 @@ func GetMemoryStats() (MemoryStats, error) {
 
 	used := total - available
 
+	// Calculate the used percentage
+	usedPct := (float64(used) / float64(total)) * 100.0
+
 	return MemoryStats{
 		Total:     total,
 		Available: available,
 		Used:      used,
+		UsedPct:   usedPct,
 	}, nil
 }
 
@@ -195,18 +204,20 @@ func CalculateCPUUsage(prevStats, currentStats CPUStats) CPUStats {
 	}
 
 	return CPUStats{
-		User:       calcDelta(currentStats.User, prevStats.User),
-		Nice:       calcDelta(currentStats.Nice, prevStats.Nice),
-		System:     calcDelta(currentStats.System, prevStats.System),
-		Idle:       calcDelta(currentStats.Idle, prevStats.Idle),
-		Iowait:     calcDelta(currentStats.Iowait, prevStats.Iowait),
-		Irq:        calcDelta(currentStats.Irq, prevStats.Irq),
-		Softirq:    calcDelta(currentStats.Softirq, prevStats.Softirq),
-		Steal:      calcDelta(currentStats.Steal, prevStats.Steal),
-		Guest:      calcDelta(currentStats.Guest, prevStats.Guest),
-		GuestNice:  calcDelta(currentStats.GuestNice, prevStats.GuestNice),
-		ActiveTime: calcDelta(currentStats.ActiveTime, prevStats.ActiveTime),
-		IdleTime:   calcDelta(currentStats.IdleTime, prevStats.IdleTime),
-		TotalTime:  calcDelta(currentStats.TotalTime, prevStats.TotalTime),
+		User:             calcDelta(currentStats.User, prevStats.User),
+		Nice:             calcDelta(currentStats.Nice, prevStats.Nice),
+		System:           calcDelta(currentStats.System, prevStats.System),
+		Idle:             calcDelta(currentStats.Idle, prevStats.Idle),
+		Iowait:           calcDelta(currentStats.Iowait, prevStats.Iowait),
+		Irq:              calcDelta(currentStats.Irq, prevStats.Irq),
+		Softirq:          calcDelta(currentStats.Softirq, prevStats.Softirq),
+		Steal:            calcDelta(currentStats.Steal, prevStats.Steal),
+		Guest:            calcDelta(currentStats.Guest, prevStats.Guest),
+		GuestNice:        calcDelta(currentStats.GuestNice, prevStats.GuestNice),
+		ActiveTime:       calcDelta(currentStats.ActiveTime, prevStats.ActiveTime),
+		IdleTime:         calcDelta(currentStats.IdleTime, prevStats.IdleTime),
+		TotalTime:        calcDelta(currentStats.TotalTime, prevStats.TotalTime),
+		UsedPct:          float64(calcDelta(currentStats.ActiveTime, prevStats.ActiveTime)) / float64(calcDelta(currentStats.TotalTime, prevStats.TotalTime)) * 100.0,
+		UsedPctSinceBoot: &currentStats.UsedPct,
 	}
 }
