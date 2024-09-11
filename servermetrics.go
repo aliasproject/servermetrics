@@ -189,27 +189,24 @@ func GetDiskStats(path string) (DiskStats, error) {
 }
 
 // CalculateCPUUsage calculates the CPU usage between two snapshots of CPUStats
-func CalculateCPUUsage(prevStats, currentStats CPUStats) map[string]uint64 {
-	usage := make(map[string]uint64)
-
+func CalculateCPUUsage(prevStats, currentStats CPUStats) CPUStats {
 	calcDelta := func(current, prev uint64) uint64 {
 		return current - prev
 	}
 
-	usage["user"] = calcDelta(currentStats.User, prevStats.User)
-	usage["nice"] = calcDelta(currentStats.Nice, prevStats.Nice)
-	usage["system"] = calcDelta(currentStats.System, prevStats.System)
-	usage["idle"] = calcDelta(currentStats.Idle, prevStats.Idle)
-	usage["iowait"] = calcDelta(currentStats.Iowait, prevStats.Iowait)
-	usage["irq"] = calcDelta(currentStats.Irq, prevStats.Irq)
-	usage["softirq"] = calcDelta(currentStats.Softirq, prevStats.Softirq)
-	usage["steal"] = calcDelta(currentStats.Steal, prevStats.Steal)
-	usage["guest"] = calcDelta(currentStats.Guest, prevStats.Guest)
-	usage["guestNice"] = calcDelta(currentStats.GuestNice, prevStats.GuestNice)
-
-	usage["active_time"] = calcDelta(currentStats.ActiveTime, prevStats.ActiveTime)
-	usage["idle_time"] = calcDelta(currentStats.IdleTime, prevStats.IdleTime)
-	usage["total_time"] = calcDelta(currentStats.TotalTime, prevStats.TotalTime)
-
-	return usage
+	return CPUStats{
+		User:       calcDelta(currentStats.User, prevStats.User),
+		Nice:       calcDelta(currentStats.Nice, prevStats.Nice),
+		System:     calcDelta(currentStats.System, prevStats.System),
+		Idle:       calcDelta(currentStats.Idle, prevStats.Idle),
+		Iowait:     calcDelta(currentStats.Iowait, prevStats.Iowait),
+		Irq:        calcDelta(currentStats.Irq, prevStats.Irq),
+		Softirq:    calcDelta(currentStats.Softirq, prevStats.Softirq),
+		Steal:      calcDelta(currentStats.Steal, prevStats.Steal),
+		Guest:      calcDelta(currentStats.Guest, prevStats.Guest),
+		GuestNice:  calcDelta(currentStats.GuestNice, prevStats.GuestNice),
+		ActiveTime: calcDelta(currentStats.ActiveTime, prevStats.ActiveTime),
+		IdleTime:   calcDelta(currentStats.IdleTime, prevStats.IdleTime),
+		TotalTime:  calcDelta(currentStats.TotalTime, prevStats.TotalTime),
+	}
 }
