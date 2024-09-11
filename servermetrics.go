@@ -10,34 +10,34 @@ import (
 
 // CPUStats represents the CPU stats at a point in time
 type CPUStats struct {
-	User       uint64
-	Nice       uint64
-	System     uint64
-	Idle       uint64
-	Iowait     uint64
-	Irq        uint64
-	Softirq    uint64
-	Steal      uint64
-	Guest      uint64
-	GuestNice  uint64
-	ActiveTime uint64
-	IdleTime   uint64
-	TotalTime  uint64
+	User       uint64 `json:"user"`
+	Nice       uint64 `json:"nice"`
+	System     uint64 `json:"system"`
+	Idle       uint64 `json:"idle"`
+	Iowait     uint64 `json:"iowait"`
+	Irq        uint64 `json:"irq"`
+	Softirq    uint64 `json:"softirq"`
+	Steal      uint64 `json:"steal"`
+	Guest      uint64 `json:"guest"`
+	GuestNice  uint64 `json:"guest_nice"`
+	ActiveTime uint64 `json:"active_time"`
+	IdleTime   uint64 `json:"idle_time"`
+	TotalTime  uint64 `json:"total_time"`
 }
 
 // MemoryStats represents the memory usage stats at a point in time
 type MemoryStats struct {
-	Total     uint64
-	Available uint64
-	Used      uint64
+	Total     uint64 `json:"total"`
+	Available uint64 `json:"available"`
+	Used      uint64 `json:"used"`
 }
 
 // DiskStats represents the disk space usage stats at a point in time
 type DiskStats struct {
-	Total   uint64
-	Free    uint64
-	Used    uint64
-	UsedPct float64
+	Total   uint64  `json:"total"`
+	Free    uint64  `json:"free"`
+	Used    uint64  `json:"used"`
+	UsedPct float64 `json:"usedpct"`
 }
 
 // GetCPUStats reads CPU stats from /proc/stat and returns a CPUStats struct
