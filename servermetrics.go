@@ -196,20 +196,20 @@ func CalculateCPUUsage(prevStats, currentStats CPUStats) map[string]uint64 {
 		return current - prev
 	}
 
-	usage["User"] = calcDelta(currentStats.User, prevStats.User)
-	usage["Nice"] = calcDelta(currentStats.Nice, prevStats.Nice)
-	usage["System"] = calcDelta(currentStats.System, prevStats.System)
-	usage["Idle"] = calcDelta(currentStats.Idle, prevStats.Idle)
-	usage["Iowait"] = calcDelta(currentStats.Iowait, prevStats.Iowait)
-	usage["Irq"] = calcDelta(currentStats.Irq, prevStats.Irq)
-	usage["Softirq"] = calcDelta(currentStats.Softirq, prevStats.Softirq)
-	usage["Steal"] = calcDelta(currentStats.Steal, prevStats.Steal)
-	usage["Guest"] = calcDelta(currentStats.Guest, prevStats.Guest)
-	usage["GuestNice"] = calcDelta(currentStats.GuestNice, prevStats.GuestNice)
+	usage["user"] = calcDelta(currentStats.User, prevStats.User)
+	usage["nice"] = calcDelta(currentStats.Nice, prevStats.Nice)
+	usage["system"] = calcDelta(currentStats.System, prevStats.System)
+	usage["idle"] = calcDelta(currentStats.Idle, prevStats.Idle)
+	usage["iowait"] = calcDelta(currentStats.Iowait, prevStats.Iowait)
+	usage["irq"] = calcDelta(currentStats.Irq, prevStats.Irq)
+	usage["softirq"] = calcDelta(currentStats.Softirq, prevStats.Softirq)
+	usage["steal"] = calcDelta(currentStats.Steal, prevStats.Steal)
+	usage["guest"] = calcDelta(currentStats.Guest, prevStats.Guest)
+	usage["guestNice"] = calcDelta(currentStats.GuestNice, prevStats.GuestNice)
 
-	usage["Active"] = calcDelta(currentStats.ActiveTime, prevStats.ActiveTime)
-	usage["Idle"] = calcDelta(currentStats.IdleTime, prevStats.IdleTime)
-	usage["Total"] = calcDelta(currentStats.TotalTime, prevStats.TotalTime)
+	usage["active"] = calcDelta(currentStats.ActiveTime, prevStats.ActiveTime)
+	usage["idle"] = calcDelta(currentStats.IdleTime, prevStats.IdleTime)
+	usage["total"] = calcDelta(currentStats.TotalTime, prevStats.TotalTime)
 
 	return usage
 }
