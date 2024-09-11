@@ -207,9 +207,9 @@ func CalculateCPUUsage(prevStats, currentStats CPUStats) map[string]uint64 {
 	usage["guest"] = calcDelta(currentStats.Guest, prevStats.Guest)
 	usage["guestNice"] = calcDelta(currentStats.GuestNice, prevStats.GuestNice)
 
-	usage["active"] = calcDelta(currentStats.ActiveTime, prevStats.ActiveTime)
-	usage["idle"] = calcDelta(currentStats.IdleTime, prevStats.IdleTime)
-	usage["total"] = calcDelta(currentStats.TotalTime, prevStats.TotalTime)
+	usage["active_time"] = calcDelta(currentStats.ActiveTime, prevStats.ActiveTime)
+	usage["idle_time"] = calcDelta(currentStats.IdleTime, prevStats.IdleTime)
+	usage["total_time"] = calcDelta(currentStats.TotalTime, prevStats.TotalTime)
 
 	return usage
 }
