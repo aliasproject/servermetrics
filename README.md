@@ -125,28 +125,36 @@ func main() {
 ### Types
 
 #### CPUStats
+
 Contains detailed CPU timing information:
+
 - `User`, `Nice`, `System`, `Idle`, `Iowait`, `Irq`, `Softirq`, `Steal`, `Guest`, `GuestNice`: Raw CPU time values
 - `ActiveTime`, `IdleTime`, `TotalTime`: Calculated time totals
 - `UsedPct`: CPU usage percentage
 - `UsedPctSinceBoot`: CPU usage percentage since boot (only set by `CalculateCPUUsage`)
 
 #### MemoryStats
+
 Contains memory usage information:
+
 - `Total`: Total system memory in KB
 - `Available`: Available memory in KB
 - `Used`: Used memory in KB
 - `UsedPct`: Memory usage percentage
 
 #### DiskStats
+
 Contains disk space information:
+
 - `Total`: Total disk space in bytes
 - `Free`: Free disk space in bytes
 - `Used`: Used disk space in bytes
 - `UsedPct`: Disk usage percentage
 
 #### ContainerStats
+
 Contains Docker container statistics:
+
 - `ContainerID`: Docker container ID
 - `ContainerName`: Container name
 - `CPUPct`: CPU usage percentage
@@ -160,18 +168,23 @@ Contains Docker container statistics:
 ### Functions
 
 #### `GetCPUStats() (CPUStats, error)`
+
 Reads CPU statistics from `/proc/stat`.
 
 #### `GetMemoryStats() (MemoryStats, error)`
+
 Reads memory statistics from `/proc/meminfo`.
 
 #### `GetDiskStats(path string) (DiskStats, error)`
+
 Gets disk usage statistics for the specified filesystem path.
 
 #### `GetContainerStats() ([]ContainerStats, error)`
+
 Gets statistics for all running Docker containers. Requires Docker to be installed and accessible.
 
 #### `CalculateCPUUsage(prevStats, currentStats CPUStats) CPUStats`
+
 Calculates CPU usage between two CPU statistics snapshots.
 
 ## Requirements
@@ -187,7 +200,3 @@ Calculates CPU usage between two CPU statistics snapshots.
 - Container stats require the Docker daemon to be running
 - The package uses direct system calls and file reads for efficiency
 - CPU percentages are calculated based on time spent in different CPU states
-
-## License
-
-This project is open source. Please check the repository for license information.
