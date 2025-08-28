@@ -3,6 +3,7 @@ package servermetrics
 import (
 	"fmt"
 	"os"
+	"os/exec"
 	"strconv"
 	"strings"
 	"syscall"
@@ -41,6 +42,19 @@ type DiskStats struct {
 	Free    uint64  `json:"free"`
 	Used    uint64  `json:"used"`
 	UsedPct float64 `json:"usedpct"`
+}
+
+// ContainerStats represents the Docker container stats at a point in time
+type ContainerStats struct {
+	ContainerID   string  `json:"container_id"`
+	ContainerName string  `json:"container_name"`
+	CPUPct        float64 `json:"cpu_pct"`
+	MemUsage      string  `json:"mem_usage"`
+	MemLimit      string  `json:"mem_limit"`
+	MemPct        float64 `json:"mem_pct"`
+	NetIO         string  `json:"net_io"`
+	BlockIO       string  `json:"block_io"`
+	PIDs          uint64  `json:"pids"`
 }
 
 // GetCPUStats reads CPU stats from /proc/stat and returns a CPUStats struct
@@ -195,6 +209,94 @@ func GetDiskStats(path string) (DiskStats, error) {
 		Used:    used,
 		UsedPct: usedPct,
 	}, nil
+}
+
+// GetContainerStats gets Docker container statistics for all running containers
+func GetContainerStats() ([]ContainerStats, error) {
+	// Check if docker command is available
+	if _, err := exec.LookPath("docker"); err != nil {
+		return nil, fmt.Errorf("docker command not found: %v", err)
+	}
+
+	// Execute docker stats command with --no-stream to get a single snapshot
+	cmd := exec.Command("docker", "stats", "--no-stream", "--format", "table {{.Container}}\t{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}\t{{.NetIO}}\t{{.BlockIO}}\t{{.PIDs}}")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute docker stats: %v", err)
+	}
+
+	lines := strings.Split(string(output), "\n")
+	if len(lines) < 2 {
+		return []ContainerStats{}, nil
+	}
+
+	var containers []ContainerStats
+
+	// Skip the header line and process container data
+	for i := 1; i < len(lines); i++ {
+		line := strings.TrimSpace(lines[i])
+		if line == "" {
+			continue
+		}
+
+		fields := strings.Split(line, "\t")
+		if len(fields) < 8 {
+			continue
+		}
+
+		containerID := strings.TrimSpace(fields[0])
+		containerName := strings.TrimSpace(fields[1])
+		cpuPercStr := strings.TrimSpace(fields[2])
+		memUsage := strings.TrimSpace(fields[3])
+		memPercStr := strings.TrimSpace(fields[4])
+		netIO := strings.TrimSpace(fields[5])
+		blockIO := strings.TrimSpace(fields[6])
+		pidsStr := strings.TrimSpace(fields[7])
+
+		// Parse CPU percentage
+		cpuPercStr = strings.TrimSuffix(cpuPercStr, "%")
+		cpuPct, err := strconv.ParseFloat(cpuPercStr, 64)
+		if err != nil {
+			continue
+		}
+
+		// Parse memory percentage
+		memPercStr = strings.TrimSuffix(memPercStr, "%")
+		memPct, err := strconv.ParseFloat(memPercStr, 64)
+		if err != nil {
+			continue
+		}
+
+		// Parse memory usage and limit
+		var memUsagePart, memLimitPart string
+		if slashIndex := strings.Index(memUsage, "/"); slashIndex != -1 {
+			memUsagePart = strings.TrimSpace(memUsage[:slashIndex])
+			memLimitPart = strings.TrimSpace(memUsage[slashIndex+1:])
+		} else {
+			memUsagePart = memUsage
+			memLimitPart = ""
+		}
+
+		// Parse PIDs
+		pids, err := strconv.ParseUint(pidsStr, 10, 64)
+		if err != nil {
+			pids = 0
+		}
+
+		containers = append(containers, ContainerStats{
+			ContainerID:   containerID,
+			ContainerName: containerName,
+			CPUPct:        cpuPct,
+			MemUsage:      memUsagePart,
+			MemLimit:      memLimitPart,
+			MemPct:        memPct,
+			NetIO:         netIO,
+			BlockIO:       blockIO,
+			PIDs:          pids,
+		})
+	}
+
+	return containers, nil
 }
 
 // CalculateCPUUsage calculates the CPU usage between two snapshots of CPUStats
