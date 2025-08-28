@@ -215,7 +215,7 @@ func GetDiskStats(path string) (DiskStats, error) {
 func GetContainerStats() ([]ContainerStats, error) {
 	// Check if docker command is available
 	if _, err := exec.LookPath("docker"); err != nil {
-		return nil, fmt.Errorf("docker command not found: %v", err)
+		return []ContainerStats{}, nil
 	}
 
 	// Execute docker stats command with --no-stream to get a single snapshot
