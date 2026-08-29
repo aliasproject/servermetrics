@@ -141,6 +141,9 @@ Contains memory usage information:
 - `Available`: Available memory in KB
 - `Used`: Used memory in KB
 - `UsedPct`: Memory usage percentage
+- `SwapTotal`: Total swap space in KB (`0` if no swap is configured)
+- `SwapUsed`: Swap space in use, in KB
+- `SwapUsedPct`: Swap usage percentage (`0` when `SwapTotal` is `0`, not a divide-by-zero)
 
 #### DiskStats
 
