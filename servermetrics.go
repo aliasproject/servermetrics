@@ -34,6 +34,12 @@ type MemoryStats struct {
 	Available uint64  `json:"available"`
 	Used      uint64  `json:"used"`
 	UsedPct   float64 `json:"usedpct"`
+	// SwapTotal is 0 on a host with no swap configured at all -- callers
+	// distinguish "no swap" from "swap present but unused" by checking this
+	// rather than SwapUsedPct, which is 0 in both cases.
+	SwapTotal   uint64  `json:"swap_total"`
+	SwapUsed    uint64  `json:"swap_used"`
+	SwapUsedPct float64 `json:"swap_usedpct"`
 }
 
 // DiskStats represents the disk space usage stats at a point in time
@@ -142,7 +148,7 @@ func GetMemoryStats() (MemoryStats, error) {
 		return MemoryStats{}, err
 	}
 
-	var total, available uint64
+	var total, available, swapTotal, swapFree uint64
 
 	lines := strings.Split(string(data), "\n")
 	for _, line := range lines {
@@ -162,6 +168,10 @@ func GetMemoryStats() (MemoryStats, error) {
 			total = value
 		case "MemAvailable":
 			available = value
+		case "SwapTotal":
+			swapTotal = value
+		case "SwapFree":
+			swapFree = value
 		}
 	}
 
@@ -174,11 +184,20 @@ func GetMemoryStats() (MemoryStats, error) {
 	// Calculate the used percentage
 	usedPct := (float64(used) / float64(total)) * 100.0
 
+	swapUsed := swapTotal - swapFree
+	var swapUsedPct float64
+	if swapTotal > 0 {
+		swapUsedPct = (float64(swapUsed) / float64(swapTotal)) * 100.0
+	}
+
 	return MemoryStats{
-		Total:     total,
-		Available: available,
-		Used:      used,
-		UsedPct:   usedPct,
+		Total:       total,
+		Available:   available,
+		Used:        used,
+		UsedPct:     usedPct,
+		SwapTotal:   swapTotal,
+		SwapUsed:    swapUsed,
+		SwapUsedPct: swapUsedPct,
 	}, nil
 }
 

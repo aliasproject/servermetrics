@@ -35,10 +35,13 @@ func TestCPUStatsStruct(t *testing.T) {
 
 func TestMemoryStatsStruct(t *testing.T) {
 	stats := MemoryStats{
-		Total:     8388608,
-		Available: 4194304,
-		Used:      4194304,
-		UsedPct:   50.0,
+		Total:       8388608,
+		Available:   4194304,
+		Used:        4194304,
+		UsedPct:     50.0,
+		SwapTotal:   2097152,
+		SwapUsed:    1048576,
+		SwapUsedPct: 50.0,
 	}
 
 	if stats.Total != 8388608 {
@@ -46,6 +49,12 @@ func TestMemoryStatsStruct(t *testing.T) {
 	}
 	if stats.UsedPct != 50.0 {
 		t.Errorf("Expected UsedPct 50.0, got %f", stats.UsedPct)
+	}
+	if stats.SwapTotal != 2097152 {
+		t.Errorf("Expected SwapTotal 2097152, got %d", stats.SwapTotal)
+	}
+	if stats.SwapUsedPct != 50.0 {
+		t.Errorf("Expected SwapUsedPct 50.0, got %f", stats.SwapUsedPct)
 	}
 }
 
@@ -139,6 +148,19 @@ func TestGetMemoryStats(t *testing.T) {
 	}
 	if stats.Used == 0 {
 		t.Error("Expected non-zero Used memory")
+	}
+
+	// SwapTotal is legitimately 0 on a host with no swap configured, so it
+	// isn't asserted non-zero -- only that the derived fields stay
+	// internally consistent whatever the host's actual swap setup is.
+	if stats.SwapUsed > stats.SwapTotal {
+		t.Errorf("SwapUsed (%d) should not exceed SwapTotal (%d)", stats.SwapUsed, stats.SwapTotal)
+	}
+	if stats.SwapUsedPct < 0 || stats.SwapUsedPct > 100 {
+		t.Errorf("SwapUsedPct should be 0-100, got %f", stats.SwapUsedPct)
+	}
+	if stats.SwapTotal == 0 && stats.SwapUsedPct != 0 {
+		t.Error("Expected SwapUsedPct 0 when SwapTotal is 0")
 	}
 }
 
