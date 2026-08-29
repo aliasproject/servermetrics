@@ -203,3 +203,7 @@ Calculates CPU usage between two CPU statistics snapshots.
 - Container stats require the Docker daemon to be running
 - The package uses direct system calls and file reads for efficiency
 - CPU percentages are calculated based on time spent in different CPU states
+
+## License
+
+MIT — see [LICENSE](LICENSE).
