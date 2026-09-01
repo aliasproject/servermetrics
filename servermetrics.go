@@ -63,6 +63,20 @@ type ContainerStats struct {
 	PIDs          uint64  `json:"pids"`
 }
 
+// ContainerInfo represents a Docker container's identity and lifecycle state,
+// independent of whether it is currently running. Unlike ContainerStats
+// (populated by `docker stats`, running containers only), this comes from
+// `docker ps -a` and is the only source that ever reports a stopped/exited
+// container.
+type ContainerInfo struct {
+	ContainerID   string `json:"container_id"`
+	ContainerName string `json:"container_name"`
+	Image         string `json:"image"`
+	State         string `json:"state"`  // "running", "exited", "created", "paused", ...
+	Status        string `json:"status"` // human string, e.g. "Up 3 hours" / "Exited (0) 2 days ago"
+	Ports         string `json:"ports"`  // raw docker ps ports column, e.g. "0.0.0.0:8080->80/tcp"
+}
+
 // GetCPUStats reads CPU stats from /proc/stat and returns a CPUStats struct
 func GetCPUStats() (CPUStats, error) {
 	data, err := os.ReadFile("/proc/stat")
@@ -312,6 +326,64 @@ func GetContainerStats() ([]ContainerStats, error) {
 			NetIO:         netIO,
 			BlockIO:       blockIO,
 			PIDs:          pids,
+		})
+	}
+
+	return containers, nil
+}
+
+// GetContainerList gets Docker container identity/lifecycle-state information
+// for every container on the host, running or not. Unlike GetContainerStats
+// (`docker stats`, running containers only), this uses `docker ps -a` so a
+// stopped/exited container is still reported.
+func GetContainerList() ([]ContainerInfo, error) {
+	// Check if docker command is available
+	if _, err := exec.LookPath("docker"); err != nil {
+		return []ContainerInfo{}, nil
+	}
+
+	// Execute docker ps -a to get every container regardless of state
+	cmd := exec.Command("docker", "ps", "-a", "--format", "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.Ports}}")
+	output, err := cmd.Output()
+	if err != nil {
+		return nil, fmt.Errorf("failed to execute docker ps: %v", err)
+	}
+
+	lines := strings.Split(string(output), "\n")
+	if len(lines) < 2 {
+		return []ContainerInfo{}, nil
+	}
+
+	var containers []ContainerInfo
+
+	// Skip the header line and process container data
+	for i := 1; i < len(lines); i++ {
+		line := strings.TrimSpace(lines[i])
+		if line == "" {
+			continue
+		}
+
+		fields := strings.Split(line, "\t")
+		if len(fields) < 5 {
+			continue
+		}
+
+		// Ports is often empty (a container with no exposed ports), which
+		// Split still accounts for as an empty trailing field -- but only
+		// when the format string actually emitted the column, hence the
+		// >= 5 (not == 6) check above and the defensive index below.
+		ports := ""
+		if len(fields) >= 6 {
+			ports = strings.TrimSpace(fields[5])
+		}
+
+		containers = append(containers, ContainerInfo{
+			ContainerID:   strings.TrimSpace(fields[0]),
+			ContainerName: strings.TrimSpace(fields[1]),
+			Image:         strings.TrimSpace(fields[2]),
+			State:         strings.TrimSpace(fields[3]),
+			Status:        strings.TrimSpace(fields[4]),
+			Ports:         ports,
 		})
 	}
 

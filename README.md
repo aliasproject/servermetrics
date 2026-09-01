@@ -8,6 +8,7 @@ A Go package for collecting server and container metrics from Linux systems.
 - **Memory Statistics**: Get memory usage information from `/proc/meminfo`
 - **Disk Statistics**: Get disk space usage for any filesystem path
 - **Docker Container Statistics**: Get comprehensive stats for all running Docker containers
+- **Docker Container List**: Get identity/lifecycle state (image, status, ports) for every container, including stopped ones
 - **CPU Usage Calculation**: Calculate CPU usage between two time snapshots
 
 ## Installation
@@ -82,6 +83,36 @@ func main() {
         fmt.Printf("  Network I/O: %s\n", container.NetIO)
         fmt.Printf("  Block I/O: %s\n", container.BlockIO)
         fmt.Printf("  PIDs: %d\n\n", container.PIDs)
+    }
+}
+```
+
+### Docker Container List
+
+```go
+package main
+
+import (
+    "fmt"
+    "log"
+    "github.com/aliasproject/servermetrics"
+)
+
+func main() {
+    // Get every container's identity/state, including stopped ones
+    // (unlike GetContainerStats, which only reports running containers)
+    containers, err := servermetrics.GetContainerList()
+    if err != nil {
+        log.Fatal(err)
+    }
+
+    fmt.Printf("Found %d containers:\n\n", len(containers))
+
+    for _, container := range containers {
+        fmt.Printf("Container: %s (%s)\n", container.ContainerName, container.ContainerID[:12])
+        fmt.Printf("  Image: %s\n", container.Image)
+        fmt.Printf("  State: %s (%s)\n", container.State, container.Status)
+        fmt.Printf("  Ports: %s\n\n", container.Ports)
     }
 }
 ```
@@ -168,6 +199,17 @@ Contains Docker container statistics:
 - `BlockIO`: Block I/O statistics
 - `PIDs`: Number of processes/threads in the container
 
+#### ContainerInfo
+
+Contains a Docker container's identity and lifecycle state, for every container regardless of whether it's running:
+
+- `ContainerID`: Docker container ID
+- `ContainerName`: Container name
+- `Image`: Image the container was created from
+- `State`: Lifecycle state (`running`, `exited`, `created`, `paused`, ...)
+- `Status`: Human-readable status (e.g., "Up 3 hours", "Exited (0) 2 days ago")
+- `Ports`: Published ports, as reported by `docker ps` (often empty)
+
 ### Functions
 
 #### `GetCPUStats() (CPUStats, error)`
@@ -185,6 +227,10 @@ Gets disk usage statistics for the specified filesystem path.
 #### `GetContainerStats() ([]ContainerStats, error)`
 
 Gets statistics for all running Docker containers. Requires Docker to be installed and accessible.
+
+#### `GetContainerList() ([]ContainerInfo, error)`
+
+Gets identity/lifecycle-state information for every Docker container, running or stopped. Requires Docker to be installed and accessible.
 
 #### `CalculateCPUUsage(prevStats, currentStats CPUStats) CPUStats`
 

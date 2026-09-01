@@ -98,6 +98,27 @@ func TestContainerStatsStruct(t *testing.T) {
 	}
 }
 
+func TestContainerInfoStruct(t *testing.T) {
+	info := ContainerInfo{
+		ContainerID:   "abc123def456",
+		ContainerName: "test-container",
+		Image:         "ghcr.io/aliasproject/php:8.4-frankenphp",
+		State:         "running",
+		Status:        "Up 3 hours",
+		Ports:         "0.0.0.0:8080->80/tcp",
+	}
+
+	if info.ContainerID != "abc123def456" {
+		t.Errorf("Expected ContainerID 'abc123def456', got '%s'", info.ContainerID)
+	}
+	if info.Image != "ghcr.io/aliasproject/php:8.4-frankenphp" {
+		t.Errorf("Expected Image 'ghcr.io/aliasproject/php:8.4-frankenphp', got '%s'", info.Image)
+	}
+	if info.State != "running" {
+		t.Errorf("Expected State 'running', got '%s'", info.State)
+	}
+}
+
 func TestGetCPUStats(t *testing.T) {
 	stats, err := GetCPUStats()
 
@@ -224,6 +245,37 @@ func TestGetContainerStats(t *testing.T) {
 		}
 		// PIDs can be 0, so just check it's not negative
 		// NetIO, BlockIO, MemUsage, MemLimit can be any string format
+	}
+}
+
+func TestGetContainerList(t *testing.T) {
+	containers, err := GetContainerList()
+
+	// It's OK if Docker isn't available
+	if err != nil {
+		if strings.Contains(err.Error(), "docker command not found") ||
+			strings.Contains(err.Error(), "failed to execute docker ps") {
+			t.Logf("Docker not available: %v", err)
+			return
+		}
+		t.Fatalf("Unexpected error: %v", err)
+	}
+
+	// If we get here, Docker is available
+	t.Logf("Found %d containers", len(containers))
+
+	// Verify container structure if any containers exist
+	for _, container := range containers {
+		if container.ContainerID == "" {
+			t.Error("Container should have non-empty ID")
+		}
+		if container.ContainerName == "" {
+			t.Error("Container should have non-empty name")
+		}
+		if container.State == "" {
+			t.Error("Container should have non-empty state")
+		}
+		// Image, Status, Ports can be any string format (Ports is often empty)
 	}
 }
 
@@ -361,6 +413,12 @@ func BenchmarkCalculateCPUUsage(b *testing.B) {
 func BenchmarkGetContainerStats(b *testing.B) {
 	for i := 0; i < b.N; i++ {
 		GetContainerStats()
+	}
+}
+
+func BenchmarkGetContainerList(b *testing.B) {
+	for i := 0; i < b.N; i++ {
+		GetContainerList()
 	}
 }
 
