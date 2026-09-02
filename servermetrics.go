@@ -290,7 +290,19 @@ func GetContainerStats() ([]ContainerStats, error) {
 			continue
 		}
 
+		// `docker stats --format "{{.Container}}"` prints the FULL 64-char
+		// ID, while `docker ps --format "{{.ID}}"` in GetContainerList below
+		// prints Docker's own 12-char short ID (there's no "short ID"
+		// template verb for `stats`, and no "full ID" one for `ps`) -- left
+		// unreconciled, a container's stats and its ps -a inventory entry
+		// carry different ContainerID values for the same container, so a
+		// downstream consumer keying/joining on ContainerID (matching one
+		// against the other) sees two different, only-half-populated
+		// entries instead of one. Truncate here to match `ps`'s convention.
 		containerID := strings.TrimSpace(fields[0])
+		if len(containerID) > 12 {
+			containerID = containerID[:12]
+		}
 		containerName := strings.TrimSpace(fields[1])
 		cpuPercStr := strings.TrimSpace(fields[2])
 		memUsage := strings.TrimSpace(fields[3])

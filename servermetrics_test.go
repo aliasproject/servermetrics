@@ -242,6 +242,13 @@ func TestGetContainerStats(t *testing.T) {
 		if container.ContainerID == "" {
 			t.Error("Container should have non-empty ID")
 		}
+		// Must match docker ps's short-ID convention (see GetContainerList)
+		// -- otherwise a caller joining this against GetContainerList's
+		// output on ContainerID can't match a stats row to its inventory
+		// entry.
+		if len(container.ContainerID) > 12 {
+			t.Errorf("ContainerID should be Docker's 12-char short ID, got %d chars: %s", len(container.ContainerID), container.ContainerID)
+		}
 		if container.ContainerName == "" {
 			t.Error("Container should have non-empty name")
 		}
@@ -285,6 +292,50 @@ func TestGetContainerList(t *testing.T) {
 		}
 		// Image, Status, Ports can be any string format (Ports is often empty)
 	}
+}
+
+// TestContainerIDsMatchBetweenStatsAndList guards against GetContainerStats
+// and GetContainerList disagreeing on ID format for the same real
+// containers -- the actual bug this ID truncation fixed: a consumer joining
+// stats to inventory by ContainerID (e.g. to attach an image name to a
+// running container's stats) silently failed to match anything, since
+// `docker stats` returned full 64-char IDs while `docker ps` returned
+// 12-char short ones.
+func TestContainerIDsMatchBetweenStatsAndList(t *testing.T) {
+	stats, err := GetContainerStats()
+	if err != nil {
+		t.Logf("Docker not available: %v", err)
+		return
+	}
+
+	list, err := GetContainerList()
+	if err != nil {
+		t.Logf("Docker not available: %v", err)
+		return
+	}
+
+	if len(stats) == 0 {
+		t.Skip("No running containers to cross-check")
+	}
+
+	listIDs := make(map[string]bool, len(list))
+	for _, c := range list {
+		listIDs[c.ContainerID] = true
+	}
+
+	for _, s := range stats {
+		if !listIDs[s.ContainerID] {
+			t.Errorf("ContainerID %q from GetContainerStats has no matching entry in GetContainerList (IDs: %v)", s.ContainerID, keys(listIDs))
+		}
+	}
+}
+
+func keys(m map[string]bool) []string {
+	ks := make([]string, 0, len(m))
+	for k := range m {
+		ks = append(ks, k)
+	}
+	return ks
 }
 
 func TestCalculateCPUUsage(t *testing.T) {
