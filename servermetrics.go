@@ -4,6 +4,7 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"runtime"
 	"strconv"
 	"strings"
 	"syscall"
@@ -26,6 +27,12 @@ type CPUStats struct {
 	TotalTime        uint64   `json:"total_time"`
 	UsedPct          float64  `json:"usedpct"`
 	UsedPctSinceBoot *float64 `json:"usedpct_since_boot,omitempty"`
+	// VCPUs is the number of logical CPUs available to this process (i.e.
+	// respects a container/cgroup CPU limit, not just the physical host's
+	// core count) -- a point-in-time count, not a /proc/stat delta, so
+	// CalculateCPUUsage carries it through from currentStats unchanged
+	// rather than subtracting prevStats from it.
+	VCPUs int `json:"vcpus"`
 }
 
 // MemoryStats represents the memory usage stats at a point in time
@@ -152,6 +159,7 @@ func GetCPUStats() (CPUStats, error) {
 		IdleTime:   idleTime,
 		TotalTime:  totalTime,
 		UsedPct:    usedPct,
+		VCPUs:      runtime.NumCPU(),
 	}, nil
 }
 
@@ -251,22 +259,27 @@ func GetContainerStats() ([]ContainerStats, error) {
 		return []ContainerStats{}, nil
 	}
 
-	// Execute docker stats command with --no-stream to get a single snapshot
-	cmd := exec.Command("docker", "stats", "--no-stream", "--format", "table {{.Container}}\t{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}\t{{.NetIO}}\t{{.BlockIO}}\t{{.PIDs}}")
+	// Execute docker stats command with --no-stream to get a single snapshot.
+	// Deliberately no "table " prefix: that triggers Docker's tabwriter
+	// column-aligner, which replaces every \t in the template with padded
+	// spaces for terminal display -- the parser below needs the literal
+	// tab bytes, and "table " output has none, silently matching zero
+	// lines. No "table " also means no header row, so the loop below
+	// starts at line 0, not 1.
+	cmd := exec.Command("docker", "stats", "--no-stream", "--format", "{{.Container}}\t{{.Name}}\t{{.CPUPerc}}\t{{.MemUsage}}\t{{.MemPerc}}\t{{.NetIO}}\t{{.BlockIO}}\t{{.PIDs}}")
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute docker stats: %v", err)
 	}
 
 	lines := strings.Split(string(output), "\n")
-	if len(lines) < 2 {
-		return []ContainerStats{}, nil
-	}
 
-	var containers []ContainerStats
+	// A non-nil empty slice (not the nil zero value) so JSON marshals this
+	// as [] rather than null -- callers rely on that to tell "no containers
+	// running" apart from "this agent doesn't report containers at all".
+	containers := []ContainerStats{}
 
-	// Skip the header line and process container data
-	for i := 1; i < len(lines); i++ {
+	for i := 0; i < len(lines); i++ {
 		line := strings.TrimSpace(lines[i])
 		if line == "" {
 			continue
@@ -342,22 +355,22 @@ func GetContainerList() ([]ContainerInfo, error) {
 		return []ContainerInfo{}, nil
 	}
 
-	// Execute docker ps -a to get every container regardless of state
-	cmd := exec.Command("docker", "ps", "-a", "--format", "table {{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.Ports}}")
+	// Execute docker ps -a to get every container regardless of state.
+	// Deliberately no "table " prefix: see the identical comment in
+	// GetContainerStats above -- it strips the literal tabs this parser
+	// needs and adds a header row this loop would otherwise have to skip.
+	cmd := exec.Command("docker", "ps", "-a", "--format", "{{.ID}}\t{{.Names}}\t{{.Image}}\t{{.State}}\t{{.Status}}\t{{.Ports}}")
 	output, err := cmd.Output()
 	if err != nil {
 		return nil, fmt.Errorf("failed to execute docker ps: %v", err)
 	}
 
 	lines := strings.Split(string(output), "\n")
-	if len(lines) < 2 {
-		return []ContainerInfo{}, nil
-	}
 
-	var containers []ContainerInfo
+	// Non-nil empty slice, not the nil zero value -- see GetContainerStats.
+	containers := []ContainerInfo{}
 
-	// Skip the header line and process container data
-	for i := 1; i < len(lines); i++ {
+	for i := 0; i < len(lines); i++ {
 		line := strings.TrimSpace(lines[i])
 		if line == "" {
 			continue
@@ -412,5 +425,6 @@ func CalculateCPUUsage(prevStats, currentStats CPUStats) CPUStats {
 		TotalTime:        calcDelta(currentStats.TotalTime, prevStats.TotalTime),
 		UsedPct:          float64(calcDelta(currentStats.ActiveTime, prevStats.ActiveTime)) / float64(calcDelta(currentStats.TotalTime, prevStats.TotalTime)) * 100.0,
 		UsedPctSinceBoot: &currentStats.UsedPct,
+		VCPUs:            currentStats.VCPUs,
 	}
 }

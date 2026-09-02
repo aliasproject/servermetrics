@@ -23,6 +23,7 @@ func TestCPUStatsStruct(t *testing.T) {
 		TotalTime:        10897,
 		UsedPct:          15.57,
 		UsedPctSinceBoot: nil,
+		VCPUs:            4,
 	}
 
 	if stats.User != 1000 {
@@ -30,6 +31,9 @@ func TestCPUStatsStruct(t *testing.T) {
 	}
 	if stats.UsedPct != 15.57 {
 		t.Errorf("Expected UsedPct 15.57, got %f", stats.UsedPct)
+	}
+	if stats.VCPUs != 4 {
+		t.Errorf("Expected VCPUs 4, got %d", stats.VCPUs)
 	}
 }
 
@@ -144,6 +148,10 @@ func TestGetCPUStats(t *testing.T) {
 	// Test that all fields are properly set
 	if stats.User == 0 && stats.System == 0 && stats.Idle == 0 {
 		t.Error("Expected some CPU time values to be non-zero")
+	}
+
+	if stats.VCPUs < 1 {
+		t.Errorf("Expected VCPUs >= 1, got %d", stats.VCPUs)
 	}
 }
 
@@ -296,6 +304,7 @@ func TestCalculateCPUUsage(t *testing.T) {
 		IdleTime:   8200,
 		TotalTime:  9897,
 		UsedPct:    17.15,
+		VCPUs:      8, // must not affect the delta calculated below
 	}
 
 	currentStats := CPUStats{
@@ -313,6 +322,7 @@ func TestCalculateCPUUsage(t *testing.T) {
 		IdleTime:   8750,
 		TotalTime:  10796,
 		UsedPct:    18.95,
+		VCPUs:      4,
 	}
 
 	usage := CalculateCPUUsage(prevStats, currentStats)
@@ -350,6 +360,12 @@ func TestCalculateCPUUsage(t *testing.T) {
 		t.Error("UsedPctSinceBoot should be set")
 	} else if *usage.UsedPctSinceBoot != currentStats.UsedPct {
 		t.Errorf("Expected UsedPctSinceBoot %.2f, got %.2f", currentStats.UsedPct, *usage.UsedPctSinceBoot)
+	}
+
+	// VCPUs is a point-in-time count, not a delta -- it should carry
+	// through from currentStats unchanged, not be subtracted from prevStats.
+	if usage.VCPUs != currentStats.VCPUs {
+		t.Errorf("Expected VCPUs to carry through as %d, got %d", currentStats.VCPUs, usage.VCPUs)
 	}
 }
 
